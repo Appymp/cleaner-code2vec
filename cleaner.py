@@ -31,15 +31,28 @@ rem_imp.to_csv('rem_imp',index=True)
 
 
 # Bracket normalization
-for i, row in rem_imp.iterrows():
-    if rem_imp.commit.str.contains('{'):
-        return rem_imp[i]
-    
-    elif rem_imp.commit.str.contains('}'):
-        rem_imp.drop(i)
+rem_brac=rem_imp.copy() # create new object so can compare before and after
+o=0 # intialize count variable for open brackets
+c=0
+#rem_brac.code.str.contains('{')
+rem_brac=rem_brac.reset_index().set_index('commit') # set new index while preserving old index
+rem_brac.columns=['line','code']
+rem_brac.reset_index(inplace=True)
 
-
-#package this into a function
+rem_brac_grpd=rem_brac.groupby('commit')
+for commit,rem_brac_gp in rem_brac_grpd:
+    o=0  # intialize count variable for open brackets
+    c=0  # intialize count variable for close brackets
+    #print (commit)
+    for ind,row in rem_brac_gp.iterrows():
+        if '{' in row['code']:
+            o=o+1
+   
+        if '}' in row['code']:
+            c=c+1
+        
+        if c > o:
+            rem_brac.drop(ind,inplace=True)
 
 
 
