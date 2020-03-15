@@ -30,32 +30,51 @@ rem_imp=df1[~df1['code'].str.contains('import|@|public')]
 
 # Bracket normalization
 rem_brac=rem_imp.copy() # create new object so can compare before and after
-o=0 # intialize count variable for open brackets
-c=0
-#rem_brac.code.str.contains('{')
 rem_brac=rem_brac.reset_index().set_index('project') # set new index while preserving old index
 rem_brac.columns=['line','code']
 rem_brac.reset_index(inplace=True)
 
-rem_brac_grpd=rem_brac.groupby('project')
-for proj,rem_brac_gp in rem_brac_grpd:
-    o=0  # intialize count variable for open brackets
-    c=0  # intialize count variable for close brackets
-    #print (commit)
+#  Function to insert row at specific index location. Useful for testing. 
+def ins_row(row_number,df,row_value):
+    start_upper=0
+    end_upper=row_number
+    start_lower=row_number
+    end_lower=df.shape[0]
+    upper_half = [*range(start_upper, end_upper, 1)]
+    lower_half = [*range(start_lower, end_lower, 1)] 
+    lower_half = [x.__add__(1) for x in lower_half]
+    index_ = upper_half + lower_half 
+    df.index = index_
+    df.loc[row_number] = row_value #insert after row_number
+    df = df.sort_index()
+    return df
+
+#add row to test if closing bracket operation works
+row_value=[1,'test','+ {']
+rem_brac=ins_row(23,rem_brac,row_value)
+
+#iterate over each project 
+for proj,rem_brac_gp in rem_brac.groupby('project'):
+    o=0
+    c=0
+    #iterate over each line of code within filtered project
     for ind,row in rem_brac_gp.iterrows():
         if '{' in row['code']:
-            o=o+1
-   
-        elif '}' in row['code']:
-            c=c+1
-        
-        elif c > o:
-            rem_brac.drop(ind,inplace=True)
-    #print (rem_brac.project[proj])
-    
-# add a trailing close bracket if required     
-    while o > c:
-        add_brac={'project':rem_brac.project[proj], 'code':'+ }'}
-        rem_brac=rem_brac.append(add_brac,inplace=True)
-        
+            o+=1
+            #print('open',ind,o)
             
+        if '}' in row['code']:
+            c+=1
+            #print('close',ind,c)
+        if c > o:
+            rem_brac.drop(ind,inplace=True)
+            o=0
+            c=0 
+      
+    while o > c: # add close bracket if applicable so that it balances with open brackets
+        row_value=pd.DataFrame({'project':[proj],'line':'added','code':'+ }'})
+        rem_brac=pd.concat([rem_brac.loc[:ind],row_value,rem_brac.loc[ind+1:]]).reset_index(drop=True)
+        ind+=1 #if required next close bracket applied at next index location
+        c+=1  
+        
+
