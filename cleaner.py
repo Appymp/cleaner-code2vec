@@ -75,12 +75,13 @@ def clean_table():
             row_value=pd.DataFrame({'project':[proj],'line':'added','code':'+ }'})
             rem_brac=pd.concat([rem_brac.loc[:ind],row_value,rem_brac.loc[ind+1:]]).reset_index(drop=True)
             ind+=1  
-# add '\n' for every code row of rem_brac so that parsing possible with .values output
+# add '\n' for every code row of rem_brac so that looks similar to working text output
     rem_brac['code']='\n' + rem_brac['code'].astype(str) 
 
 # Output rows of a project as a string
 #a=rem_brac[rem_brac['project']==1].code.str.cat(sep='\n').values
-    a=rem_brac[rem_brac['project']==1].code.to_string()
+    a=rem_brac[rem_brac['project']==1].code.to_string(index=False)
     return a
 
-clean_table()
+c=clean_table()
+print(c)
