@@ -9,6 +9,7 @@ Created on Wed Feb 19 11:48:26 2020
 import pandas as pd
 import ast
 import wrapper
+import numpy as np
 MAX_ROWS_PERWRITE = 10000
 
 DF_REPO = pd.DataFrame()
@@ -158,8 +159,11 @@ def getvectors(str_code, predictor):
     run the wrapper to code2vec and retrun vectors
     """
 #    output_filename = 'input\output.txt'
-    str_code = str_code.encode('utf-8').decode('unicode_escape')
-    vec = predictor.predict(str_code)
+    try:
+        str_code = str_code.encode('utf-8').decode('unicode_escape')
+        vec = predictor.predict(str_code)
+    except:
+        vec = np.nan
 #    with open(output_filename, 'at', encoding="utf-8") as f:
 #        f.write(str_code)
 #        f.write('\n')
@@ -171,7 +175,7 @@ def appenddf(user_xl, row):
     global DF_COUNT
     DF_REPO= DF_REPO.append(row, ignore_index = True)
     DF_COUNT = DF_COUNT + row.shape[0]
-    if DF_COUNT == MAX_ROWS_PERWRITE :
+    if DF_COUNT >= MAX_ROWS_PERWRITE :
         df = pd.read_excel(user_xl,error_bad_lines=False,header= 0, index = False)
         df= df.append(DF_REPO, ignore_index = True)
         df.to_excel(user_xl, index = False) 
@@ -182,8 +186,8 @@ def main():
     global DF_REPO 
     global DF_COUNT
     pd.options.display.max_colwidth = 1000 #so that the long lines of code are displayed
-    output_file = r'C:\Data\092019 CommitInfo\JavaSampling\Java_RepoCommit_Vec.xlsx'
-    repo=pd.read_excel(r'C:\Data\092019 CommitInfo\JavaSampling\Java_RepoCommit.xlsx')#Read in the table
+    output_file = r'C:\Data\092019 CommitInfo\JavaSampling\Java_RepoCommit_Vec_1.xlsx'
+    repo=pd.read_excel(r'C:\Data\092019 CommitInfo\JavaSampling\Java_RepoCommit_1.xlsx')#Read in the table
     predictor = wrapper.InteractivePredictorWrapper()
 
     df_out = pd.DataFrame()
@@ -191,20 +195,21 @@ def main():
     for i,row in repo.iterrows(): 
         nrow = pd.DataFrame()
         write_row = pd.DataFrame()
-
+        print(i)
         if pd.isna(row['PINDEX']):  # check if row is a repo or a commit          
             df = getfcommitcode(i,row)    
             if not df.empty: # if ast.literal_eval works on code, proceed        
                 df2 = preparedata(df)
                 if not df2.empty: # if there is code to find vectors proceed
-                    df2.to_excel('input\cleancode.xlsx')            
+#                    df2.to_excel('input\cleancode.xlsx')            
                     for j, cf_code in df2.groupby(['commit','file']):
-                        print(i)
+                        
                         vec = getvectors(cf_code.code.to_string(index=False), predictor)
+
                         write_row = row[['PINDEX','REPO_ID','NAME','OWNER','OWNER_TYPE','SIZE','CREATE_DATE','PUSHED_DATE','MAIN_LANGUAGE','NO_LANGUAGES','SCRIPT_SIZE','STARS','SUBSCRIPTIONS']]
-                        temp_ser = pd.Series([j, vec], index=['FILE_NO', 'VECTORS'])
+                        temp_ser = pd.Series([j, vec], index=['FILE_NO', 'VECTORS']) # if error in getting vectors it is np.nan
                         write_row = write_row.append(temp_ser)
-                        nrow = nrow.append( write_row, ignore_index=True)
+                        nrow = nrow.append( write_row, ignore_index=True)                               
                 else: 
                     write_row = row[['PINDEX','REPO_ID','NAME','OWNER','OWNER_TYPE','SIZE','CREATE_DATE','PUSHED_DATE','MAIN_LANGUAGE','NO_LANGUAGES','SCRIPT_SIZE','STARS','SUBSCRIPTIONS']]
                     temp_ser = pd.Series(["", ""], index=['FILE_NO', 'VECTORS'])
